@@ -90,7 +90,7 @@ class LLMMode(IControlMode):
             # 6. Append tool results to history and check for errors
             has_errors = False
             for i, result in enumerate(tool_results):
-                tool_call_id = agent_message.tool_calls[i].id
+                tool_call = agent_message.tool_calls[i]
                 
                 content = ""
                 if isinstance(result, Exception):
@@ -106,7 +106,13 @@ class LLMMode(IControlMode):
                         content = f"Error: {result.error.message}"
                         has_errors = True
                 
-                self.history.append(AgentMessage(role="tool", content=content, tool_call_id=tool_call_id))
+                # Append a tool message that includes the 'name' for polza.ai compatibility
+                self.history.append(AgentMessage(
+                    role="tool",
+                    content=content,
+                    tool_call_id=tool_call.id,
+                    name=tool_call.name
+                ))
             
             # 7. If there were errors, we will loop again and let the agent see them.
             # No special retry logic needed here, the main loop serves this purpose.

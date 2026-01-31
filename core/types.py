@@ -127,6 +127,7 @@ class AgentMessage:
     thought: Optional[str] = None
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[str] = None
+    name: Optional[str] = None # For non-standard APIs like polza.ai
 
     def to_dict(self):
         """Serializes the message to a dictionary for LLM API consumption."""
@@ -143,5 +144,8 @@ class AgentMessage:
             ]
         if self.tool_call_id:
             d["tool_call_id"] = self.tool_call_id
+        
+        if self.name:
+            d["name"] = self.name
 
         return d

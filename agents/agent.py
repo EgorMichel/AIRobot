@@ -58,11 +58,14 @@ class LLMAgent(IAgent):
             for param in sig.parameters.values():
                 if param.name == 'self':
                     continue
+                
                 param_type = "string"  # Default
                 if param.annotation is not inspect.Parameter.empty:
-                    if param.annotation is int or param.annotation is float:
+                    # Convert annotation to string to handle forward references ('int' vs int)
+                    annotation_str = str(param.annotation)
+                    if 'int' in annotation_str or 'float' in annotation_str:
                         param_type = "number"
-                    elif param.annotation is bool:
+                    elif 'bool' in annotation_str:
                         param_type = "boolean"
                 
                 properties[param.name] = {
@@ -146,7 +149,7 @@ Respond in the format specified by the user.
                         print(f"[warn] Failed to decode tool arguments: {args_str}. Using empty args.")
                         args = {}
                     tool_calls.append(ToolCall(id=tc["id"], name=tc["function"]["name"], args=args))
-                return Result.ok(AgentMessage(role="assistant", content=None, tool_calls=tool_calls))
+                return Result.ok(AgentMessage(role="assistant", content="", tool_calls=tool_calls))
             else:
                 # If no tool call, it's a final answer
                 return Result.ok(AgentMessage(role="assistant", content=response_message.get("content")))
