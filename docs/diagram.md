@@ -1,4 +1,3 @@
-```plantuml
 @startuml
 !theme plain
 
@@ -44,53 +43,45 @@ package "Роботизированный Голосовой Агент" {
   package "Ввод / Вывод (voice)" <<voice>> {
     [ASR\n(Ввод речи)] as ASR
     [TTS\n(Вывод речи)] as TTS
-
-    ASR -right-> TTS : текст
   }
 
   ' --- Mode ---
-  package "LLMMode" <<mode>> {
-    [Orchestration\n/ Policy] as Policy
+  package "Оркестратор" <<mode>> {
+    [LLMMode] as Mode
   }
 
-  ' --- Core (СТРОКА) ---
+  ' --- Core ---
   package "Ядро Агента" <<core>> {
+    [LLMAgent] as Agent
     [SkillExecutor] as Executor
     [RobotTools] as Tools
-    [LLMAgent] as Agent
-
-    Tools -right-> Executor
-    Executor -right-> Agent
   }
 
-  ' --- Hardware (СТРОКА) ---
+  ' --- Hardware ---
   package "Абстракция Оборудования" <<hardware>> {
     component "IRobotDriver" as IDriver <<hardware>>
     component "IKinematics" as IKinematics <<hardware>>
     component "IServo" as IServo <<hardware>>
-
-    IDriver -right-> IKinematics
-    IKinematics -right-> IServo
   }
 }
 
-' ===== Пользователь =====
-User -right-> ASR : говорит
-TTS -left-> User : озвучивает
+' ===== Пользователь <-> Система =====
+User -> ASR
+TTS -up-> User
 
-' ===== Voice → Mode =====
-ASR -down-> Policy : текст
-Policy -down-> TTS : текст
+' ===== Центральная роль LLMMode =====
+ASR ..> Mode
+Mode .up.> TTS
+Mode -down-> Agent
+Mode -down-> Executor
 
-' ===== Mode → Core =====
-Policy -down-> Agent : управляет
+' ===== Взаимодействия внутри Ядра =====
+Agent ..> LLM_API
+Agent ..> Tools
+Executor ..> Tools
 
-' ===== Core → API =====
-Agent -right-> LLM_API : HTTP
-
-' ===== Core → Hardware =====
-Tools -down-> IDriver
-Tools -down-> IKinematics
-Tools -down-> IServo
+' ===== Связи с оборудованием =====
+Tools .down.> IDriver
+Tools .down.> IKinematics
+Tools .down.> IServo
 @enduml
-```
