@@ -90,5 +90,7 @@ Agent -right-> LLM_API : HTTP
 
 ' ===== Core → Hardware =====
 Tools -down-> IDriver
+Tools -down-> IKinematics
+Tools -down-> IServo
 @enduml
 ```
