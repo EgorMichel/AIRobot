@@ -44,40 +44,38 @@ class LLMMode(IControlMode):
         """Removes special characters, markdown, and emojis to make the text safe for TTS."""
         # This regex keeps Cyrillic, Latin, numbers, spaces, and basic punctuation.
         # It removes everything else, including emojis.
-        cleaned_text = re.sub(r'[^a-zA-Zа-яА-Я0-9\s.,!?-]', '', text)
+        cleaned_text = re.sub(r"[^a-zA-Zа-яА-Я0-9\s.,!?='\-]", '', text)
         return cleaned_text.strip()
 
     async def _run_agent_loop(self, initial_request: str):
         """Manages the ReAct loop with retries: User -> Agent -> Tools -> Agent -> User."""
         self.history.append(AgentMessage(role="user", content=initial_request))
-        retries_left = self.max_retries
 
-        while retries_left > 0:
+        # This is the main ReAct step loop. It continues as long as the agent
+        # produces tool calls. It will be broken internally by a `return` statement
+        # when the agent gives a final answer. We add a safety break after 10 steps.
+        for _ in range(10): # Max 10 steps
             # 1. Get next action from agent
             agent_response_res = await self.agent.run(self.history)
             if not agent_response_res.ok:
                 await self.voice_out.speak(f"Ошибка агента: {agent_response_res.error.message}")
-                # Clear history on agent error to start fresh
-                self.history.clear()
                 return
 
             agent_message = agent_response_res.data
             self.history.append(agent_message)
 
-            # 2. If agent provided a final answer, speak it and exit
+            # 2. If agent provided a final answer, the loop is over.
             if agent_message.content:
                 cleaned_response = self._clean_text_for_tts(agent_message.content)
                 await self.voice_out.speak(cleaned_response)
                 return
 
-            # 3. If no tool calls, something is wrong
+            # 3. If no tool calls, but also no content, something is wrong.
             if not agent_message.tool_calls:
                 await self.voice_out.speak("Агент не вернул ни ответа, ни команды. Завершаю задачу.")
                 return
-            
-            # 4. Check for shutdown command and execute tools
-            has_errors = False
-            # Check for shutdown command before execution
+
+            # 4. Check for shutdown command before execution
             for tc in agent_message.tool_calls:
                 if tc.name == "shutdown":
                     print("[mode] Shutdown command received from agent.")
@@ -85,10 +83,12 @@ class LLMMode(IControlMode):
                     self.stop_loop()
                     return
 
+            # 5. Execute tools
             tool_tasks = [self.skill_executor.execute_tool_call(tc) for tc in agent_message.tool_calls]
             tool_results = await asyncio.gather(*tool_tasks, return_exceptions=True)
 
-            # 5. Append tool results to history and check for errors
+            # 6. Append tool results to history and check for errors
+            has_errors = False
             for i, result in enumerate(tool_results):
                 tool_call_id = agent_message.tool_calls[i].id
                 
@@ -98,11 +98,9 @@ class LLMMode(IControlMode):
                     has_errors = True
                 else:
                     if result.ok:
-                        # The content for a tool result MUST be a JSON-serializable string.
                         if hasattr(result.data, 'to_dict'):
                             content = json.dumps(result.data.to_dict(), indent=2)
                         else:
-                            # Handles None -> "null", str -> "\"string\"", etc.
                             content = json.dumps(result.data)
                     else:
                         content = f"Error: {result.error.message}"
@@ -110,17 +108,12 @@ class LLMMode(IControlMode):
                 
                 self.history.append(AgentMessage(role="tool", content=content, tool_call_id=tool_call_id))
             
-            # 6. If there were errors, decrement retries and continue the loop
+            # 7. If there were errors, we will loop again and let the agent see them.
+            # No special retry logic needed here, the main loop serves this purpose.
             if has_errors:
-                retries_left -= 1
-                print(f"[agent] A tool execution failed. Retries left: {retries_left}")
-                if retries_left == 0:
-                    await self.voice_out.speak("Не удалось выполнить команду после нескольких попыток.")
-                continue # Go to the next agent loop iteration to let the agent see the error
+                print(f"[agent] A tool execution failed. The agent will be notified.")
 
-        # If loop finishes without success (e.g. retries exhausted)
-        if retries_left == 0:
-             print("[agent] Task failed after maximum retries.")
+
 
     async def run_interactive_loop(self):
         """The main interactive loop for this mode."""

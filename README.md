@@ -32,12 +32,12 @@ graph TD
 
     subgraph "Агент (Мозг)"
         E[LLMAgent]
-        F[История диалога (Память)]
+        F["История диалога (Память)"]
     end
 
     subgraph "Исполнители (Руки)"
         G[SkillExecutor]
-        H[RobotTools (Набор инструментов)]
+        H["RobotTools (Набор инструментов)"]
     end
 
     A --> B -- Текст запроса --> C

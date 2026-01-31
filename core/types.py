@@ -122,7 +122,7 @@ class ToolCall:
 @dataclass
 class AgentMessage:
     role: str  # "user", "assistant", "tool"
-    content: str
+    content: Optional[str] = None
     thought: Optional[str] = None
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[str] = None
