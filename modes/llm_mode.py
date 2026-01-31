@@ -154,13 +154,3 @@ class LLMMode(IControlMode):
         self.stop_loop() # Ensure loop is stopped on exit
         await self.voice_out.speak("Режим агента выключен.")
 
-# Add a to_dict method to Result for serialization
-def result_to_dict(self):
-    return {
-        "ok": self.ok,
-        "data": self.data,
-        "error": self.error.__dict__ if self.error else None,
-    }
-
-from core.types import Result
-Result.to_dict = result_to_dict

@@ -2,6 +2,7 @@
 All implementations are stubs; replace NotImplementedError with real logic.
 """
 from __future__ import annotations
+import json
 from dataclasses import dataclass, asdict
 from typing import Generic, List, Optional, Protocol, TypeVar, Union, Callable
 
@@ -126,3 +127,21 @@ class AgentMessage:
     thought: Optional[str] = None
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[str] = None
+
+    def to_dict(self):
+        """Serializes the message to a dictionary for LLM API consumption."""
+        d = {"role": self.role}
+        
+        # Only add content if it's not None
+        if self.content is not None:
+            d["content"] = self.content
+
+        if self.tool_calls:
+            d["tool_calls"] = [
+                {"type": "function", "id": tc.id, "function": {"name": tc.name, "arguments": json.dumps(tc.args)}}
+                for tc in self.tool_calls
+            ]
+        if self.tool_call_id:
+            d["tool_call_id"] = self.tool_call_id
+
+        return d

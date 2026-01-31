@@ -155,24 +155,3 @@ Respond in the format specified by the user.
              return Result.err("llm_error", f"LLM API call failed: Failed to decode JSON. Error: {e}. Response: {raw_text}")
         except Exception as e:
             return Result.err("llm_error", f"LLM API call failed: {e}")
-
-# Add a to_dict method to AgentMessage for serialization
-# This is a bit of a hack; ideally, this would be handled by a proper serialization library.
-def agent_message_to_dict(self):
-    d = {"role": self.role}
-    
-    # Only add content if it's not None
-    if self.content is not None:
-        d["content"] = self.content
-
-    if self.tool_calls:
-        d["tool_calls"] = [
-            {"type": "function", "id": tc.id, "function": {"name": tc.name, "arguments": json.dumps(tc.args)}}
-            for tc in self.tool_calls
-        ]
-    if self.tool_call_id:
-         d["tool_call_id"] = self.tool_call_id
-
-    return d
-
-AgentMessage.to_dict = agent_message_to_dict
